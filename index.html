@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>유입채널 PV 대시보드</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;background:#F8FAFC;color:#0F172A;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1020px;margin:0 auto;padding:32px 20px 72px}
+
+/* 헤더 */
+.hd{margin-bottom:24px}
+.hd-eye{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#1D4ED8;margin-bottom:7px}
+.hd-title{font-size:24px;font-weight:800;color:#0D1B2A;letter-spacing:-.03em;margin-bottom:5px}
+.hd-desc{font-size:13px;color:#374151}
+
+/* 컨트롤 */
+.ctrl{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.ctrl-group{display:flex;align-items:center;gap:9px}
+.ctrl label{font-size:13px;font-weight:700;color:#1E293B;white-space:nowrap}
+.ctrl input[type=date]{background:#F8FAFC;border:1.5px solid #CBD5E1;border-radius:7px;padding:7px 11px;font-size:13px;color:#0F172A;font-family:inherit;outline:none}
+.ctrl input[type=date]:focus{border-color:#1D4ED8;background:#fff}
+.btn-primary{background:#0D1B2A;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .15s}
+.btn-primary:hover{background:#1E293B}
+.btn-primary:disabled{background:#CBD5E1;color:#64748B;cursor:not-allowed}
+.fetch-status{font-size:13px;font-weight:600;color:#1D4ED8}
+.top-filters{display:flex;gap:4px;margin-left:auto}
+.tf{background:#F1F5F9;border:1px solid #E2E8F0;border-radius:6px;padding:6px 13px;font-size:12px;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;transition:all .15s}
+.tf.active{background:#0D1B2A;color:#fff;border-color:#0D1B2A}
+.tf:hover:not(.active){background:#E2E8F0}
+
+/* 탭 */
+.tabs{display:flex;gap:3px;background:#E2E8F0;border-radius:10px;padding:4px;margin-bottom:16px}
+.tab{flex:1;text-align:center;padding:9px 14px;font-size:14px;font-weight:700;color:#374151;border-radius:7px;cursor:pointer;border:none;background:transparent;font-family:inherit;transition:all .15s}
+.tab.active{background:#fff;color:#0D1B2A;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.tab:hover:not(.active){color:#0D1B2A}
+
+/* 카드 */
+.card{background:#fff;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:14px;overflow:hidden}
+.card-hd{padding:16px 20px 12px;border-bottom:1px solid #F1F5F9}
+.card-ti{font-size:15px;font-weight:700;color:#0D1B2A}
+.card-nt{font-size:13px;color:#374151;margin-top:3px}
+
+/* 범례 */
+.legend{display:flex;gap:10px;flex-wrap:wrap;padding:12px 20px 6px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#1E293B;cursor:pointer;padding:3px 8px;border-radius:5px;border:1.5px solid transparent;transition:all .15s;user-select:none}
+.leg-item:hover{background:#F1F5F9}
+.leg-item.hidden{opacity:.35;text-decoration:line-through}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* 차트 */
+.chart-wrap{padding:8px 16px 18px}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid #E2E8F0;text-align:right;white-space:nowrap;background:#F8FAFC;color:#1E293B}
+.tbl th:first-child{text-align:left;padding-left:20px}
+.tbl th.tl{text-align:left}
+.tbl td{padding:9px 14px;border-bottom:1px solid #F1F5F9;color:#0F172A;vertical-align:middle}
+.tbl td:first-child{padding-left:20px;font-size:13px;font-weight:600;color:#374151}
+.tbl td.tl{text-align:left;font-weight:600;color:#0F172A}
+.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#F8FAFC}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:5px}
+.badge.up{background:#DCFCE7;color:#166534}
+.badge.dn{background:#FEE2E2;color:#B91C1C}
+.badge.na{background:#F1F5F9;color:#374151}
+.ch-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* 업로드 */
+.upload-zone{border:2px dashed #CBD5E1;border-radius:12px;padding:44px 24px;text-align:center;background:#F8FAFC;margin:20px;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:#1D4ED8;background:#EFF6FF}
+.upload-zone input[type=file]{display:none}
+.upload-ti{font-size:15px;font-weight:700;color:#1E293B;margin-bottom:6px}
+.upload-sub{font-size:13px;color:#374151}
+
+/* 보정 요약 카드 */
+.diff-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:20px 20px 0}
+.dsmc{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:15px 17px}
+.dsmc-l{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#374151;margin-bottom:8px}
+.dsmc-v{font-size:21px;font-weight:800;color:#0D1B2A;letter-spacing:-.03em}
+.dsmc-s{font-size:13px;font-weight:600;margin-top:5px;color:#374151}
+.dsmc-s.up{color:#16A34A}
+.dsmc-s.dn{color:#DC2626}
+
+.empty{text-align:center;padding:56px 20px;color:#374151;font-size:14px;font-weight:600}
+
+@media(max-width:640px){
+  .wrap{padding:20px 14px 56px}
+  .hd-title{font-size:20px}
+  .ctrl{gap:8px;padding:13px 14px}
+  .btn-primary{width:100%}
+  .top-filters{margin-left:0;width:100%}
+  .tf{flex:1;text-align:center}
+  .tab{font-size:12px;padding:8px 6px}
+  .tbl{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hd">
+  <div class="hd-eye">DA Team · Inchannel Analytics</div>
+  <div class="hd-title">유입채널 PV 대시보드</div>
+  <div class="hd-desc">HERB inchannel API 실시간 조회 · 채널별 PV 추이 및 비중 분석</div>
+</div>
+
+<div class="ctrl">
+  <div class="ctrl-group"><label>시작일</label><input type="date" id="startDt"></div>
+  <div class="ctrl-group"><label>종료일</label><input type="date" id="endDt"></div>
+  <button class="btn-primary" id="btnFetch" onclick="loadData()">불러오기</button>
+  <span class="fetch-status" id="fetchStatus"></span>
+  <div class="top-filters">
+    <button class="tf active" onclick="setTopN(5,this)">상위 5</button>
+    <button class="tf" onclick="setTopN(10,this)">상위 10</button>
+    <button class="tf" onclick="setTopN(999,this)">전체</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab0" onclick="switchTab(0)">일별 추세</button>
+  <button class="tab" id="tab1" onclick="switchTab(1)">채널 비중</button>
+  <button class="tab" id="tab2" onclick="switchTab(2)">보정 이력</button>
+  <button class="tab" id="tab3" onclick="switchTab(3)">원본 데이터</button>
+</div>
+
+<!-- 탭0 -->
+<div id="pane0">
+  <div class="card">
+    <div class="card-hd"><div class="card-ti">채널별 일별 PV 추이</div><div class="card-nt">범례 클릭으로 채널 표시/숨김 · 점선 수직선 = 주요 이벤트</div></div>
+    <div id="trendLegend" class="legend"></div>
+    <div class="chart-wrap" style="height:340px"><canvas id="trendChart"></canvas></div>
+  </div>
+</div>
+
+<!-- 탭1 -->
+<div id="pane1" style="display:none">
+  <div class="card">
+    <div class="card-hd"><div class="card-ti">채널별 PV 비중 추이</div><div class="card-nt">일별 전체 PV 대비 채널 점유율 (%) · 범례 클릭으로 채널 표시/숨김</div></div>
+    <div id="shareLegend" class="legend"></div>
+    <div class="chart-wrap" style="height:340px"><canvas id="shareChart"></canvas></div>
+  </div>
+</div>
+
+<!-- 탭2 -->
+<div id="pane2" style="display:none">
+  <div class="card">
+    <div class="card-hd"><div class="card-ti">보정 이력</div><div class="card-nt">inchannel_daily_XXXXXX.csv 업로드 시 보정 전·후 비교</div></div>
+    <div id="diffUpload">
+      <div class="upload-zone" onclick="document.getElementById('csvInput').click()">
+        <input type="file" id="csvInput" accept=".csv" onchange="loadCsv(event)">
+        <div class="upload-ti">CSV 파일 업로드</div>
+        <div class="upload-sub">inchannel_daily 백필 파일을 선택해주세요</div>
+      </div>
+    </div>
+    <div id="diffContent" style="display:none">
+      <div class="diff-summary" id="diffSummary"></div>
+      <div class="chart-wrap" style="height:280px;margin-top:16px"><canvas id="diffChart"></canvas></div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr>
+            <th style="text-align:left">날짜</th>
+            <th class="tl">채널</th>
+            <th>보정 후 PV</th>
+            <th>보정 전 PV</th>
+            <th>변동</th>
+            <th>변동률</th>
+          </tr></thead>
+          <tbody id="diffBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 탭3 -->
+<div id="pane3" style="display:none">
+  <div class="card">
+    <div class="card-hd"><div class="card-ti">원본 데이터</div><div class="card-nt">날짜 내림차순 · 최대 500행</div></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th style="text-align:left">날짜</th>
+          <th class="tl">채널</th>
+          <th>총 PV</th>
+          <th>모바일 PV</th>
+          <th>PC PV</th>
+          <th>전주대비</th>
+        </tr></thead>
+        <tbody id="rawBody"><tr><td colspan="6" class="empty">데이터를 불러오세요</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const API_URL = 'https://hmapapi.hankookilbo.com/cal/daily';
+const BASE_P  = {code:'inchannel',site_presscode:'hk',inchanneldetail:'all',preweek:'1w',periodtype:'d',psize:200};
+const CHUNK   = 1;
+const EVENTS  = [
+  {dt:'2026-01-28', label:'뉴플랫폼 개편', color:'rgba(234,88,12,.85)'},
+];
+const COLORS = [
+  '#1D4ED8','#DC2626','#16A34A','#7C3AED','#D97706',
+  '#0891B2','#BE185D','#059669','#4338CA','#B45309',
+  '#0E7490','#9333EA','#CA8A04','#15803D','#B91C1C',
+  '#6366F1','#F59E0B','#10B981','#EF4444','#8B5CF6',
+  '#06B6D4','#84CC16','#F97316','#EC4899','#14B8A6',
+  '#A855F7','#EAB308','#22C55E','#3B82F6','#F43F5E','#64748B',
+];
+
+let trendInst=null, shareInst=null, diffInst=null;
+let allData=[], topN=5, colorMap={};
+
+// 기본 날짜
+(function(){
+  const kst=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));
+  const y=new Date(kst); y.setDate(kst.getDate()-1);
+  const s=new Date(kst); s.setMonth(kst.getMonth()-4);
+  const f=d=>d.toISOString().slice(0,10);
+  document.getElementById('startDt').value=f(s);
+  document.getElementById('endDt').value=f(y);
+})();
+
+// 유틸
+const toYmd = s=>s.replace(/-/g,'');
+const num   = v=>isNaN(+v)?0:+v;
+const comma = v=>Math.round(v).toLocaleString();
+function man(v){const a=Math.abs(v);if(a>=10000000)return(a/10000000).toFixed(1)+'천만';if(a>=10000)return Math.round(a/10000)+'만';if(a>=1000)return(a/1000).toFixed(1)+'천';return String(Math.round(a));}
+function hexRgba(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
+function chunkDates(s,e){
+  const out=[];let cur=new Date(s),end=new Date(e);
+  while(cur<=end){
+    out.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate()+1);
+  }
+  return out;
+}
+
+// API
+async function fetchOne(dt){
+  const u=new URL(API_URL);
+  Object.entries({...BASE_P,startdt:toYmd(dt),enddt:toYmd(dt)}).forEach(([k,v])=>u.searchParams.set(k,v));
+  const res=await fetch(u);
+  if(!res.ok)throw new Error(`HTTP ${res.status}`);
+  const js=await res.json();
+  let r=[];
+  if(Array.isArray(js))r=js;
+  else if(js.contents)r=js.contents;
+  else if(js.data)r=js.data;
+  else for(const v of Object.values(js)){if(Array.isArray(v)){r=v;break;}}
+  return r;
+}
+
+async function loadData(){
+  const st=document.getElementById('startDt').value;
+  const ed=document.getElementById('endDt').value;
+  if(!st||!ed){alert('기간을 선택해주세요');return;}
+  const btn=document.getElementById('btnFetch');
+  const stat=document.getElementById('fetchStatus');
+  btn.disabled=true; btn.textContent='수집 중…'; stat.textContent='';
+  try{
+    const dates=chunkDates(st,ed);
+    let all=[];
+    for(let i=0;i<dates.length;i++){
+      if(i%10===0) stat.textContent=`${i+1}/${dates.length}일 수집 중…`;
+      all=all.concat(await fetchOne(dates[i]));
+      await new Promise(r=>setTimeout(r,220));
+    }
+    allData=parse(all);
+    buildColorMap();
+    renderAll();
+    stat.textContent=`완료 · ${dates.length}일 · ${allData.length}건`;
+  }catch(e){
+    stat.textContent='오류: '+e.message;
+  }finally{
+    btn.disabled=false; btn.textContent='불러오기';
+  }
+}
+
+function parse(recs){
+  return recs.filter(r=>r&&r.ymd).map(r=>{
+    const y=String(r.ymd);
+    const date=y.length===8?`${y.slice(0,4)}-${y.slice(4,6)}-${y.slice(6)}`:y;
+    return{date,ch:r.inchannelcode_txt||'기타',mobile:num(r.count_mobile),pc:num(r.count_pc),total:num(r.count),pct:num(r.count_preweek_percent)};
+  }).sort((a,b)=>a.date<b.date?-1:1);
+}
+
+function buildColorMap(){
+  const m={};
+  allData.forEach(d=>{m[d.ch]=(m[d.ch]||0)+d.total;});
+  Object.entries(m).sort((a,b)=>b[1]-a[1]).forEach(([ch],i)=>{colorMap[ch]=COLORS[i%COLORS.length];});
+}
+
+function getChannels(n){
+  const m={};
+  allData.forEach(d=>{m[d.ch]=(m[d.ch]||0)+d.total;});
+  const sorted=Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  return (n>=999?sorted:sorted.slice(0,n)).map(([ch])=>({ch,color:colorMap[ch]||'#374151'}));
+}
+function getDates(){return[...new Set(allData.map(d=>d.date))].sort();}
+
+// 이벤트 플러그인 - 하단 가로 레이블
+function evPlugin(dates){
+  return{id:'ev',afterDraw(chart){
+    const{ctx,chartArea:ca,scales:{x}}=chart;
+    if(!ca||!x)return;
+    ctx.save();
+    EVENTS.forEach(ev=>{
+      const i=dates.indexOf(ev.dt);if(i<0)return;
+      const px=x.getPixelForValue(i);
+      ctx.strokeStyle=ev.color;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();
+      ctx.setLineDash([]);
+      // 하단 가로 레이블
+      const lw=ctx.measureText(ev.label).width+10;
+      const lx=Math.min(Math.max(px-lw/2,ca.left),ca.right-lw);
+      ctx.fillStyle=ev.color.replace('.85)','.12)').replace('.8)','.12)');
+      ctx.beginPath();ctx.roundRect(lx,ca.bottom+6,lw,18,3);ctx.fill();
+      ctx.font='bold 10px Apple SD Gothic Neo,system-ui';
+      ctx.fillStyle=ev.color;ctx.textAlign='center';
+      ctx.fillText(ev.label,lx+lw/2,ca.bottom+18);
+    });
+    ctx.restore();
+  }};
+}
+
+// 범례 빌드 + 클릭 토글
+function buildLegend(legendId,chartGetter,chs){
+  const el=document.getElementById(legendId);if(!el)return;
+  el.innerHTML='';
+  chs.forEach(({ch,color},i)=>{
+    const item=document.createElement('div');
+    item.className='leg-item';
+    item.dataset.idx=i;
+    const dot=document.createElement('div');dot.className='leg-dot';dot.style.background=color;
+    const lbl=document.createElement('span');lbl.textContent=ch;
+    item.appendChild(dot);item.appendChild(lbl);
+    item.addEventListener('click',()=>{
+      const chart=chartGetter();if(!chart)return;
+      const meta=chart.getDatasetMeta(i);
+      meta.hidden=!meta.hidden;
+      chart.update();
+      item.classList.toggle('hidden',meta.hidden);
+    });
+    el.appendChild(item);
+  });
+}
+
+const CHART_OPTS=(dates,yFmt,ttFmt)=>({
+  responsive:true,maintainAspectRatio:false,
+  interaction:{mode:'index',intersect:false},
+  layout:{padding:{bottom:28}},
+  plugins:{
+    legend:{display:false},
+    tooltip:{
+      backgroundColor:'#0D1B2A',titleColor:'#F1F5F9',bodyColor:'#E2E8F0',
+      borderColor:'#1E293B',borderWidth:1,padding:12,
+      titleFont:{size:13,weight:'700'},bodyFont:{size:13},
+      callbacks:{label:ttFmt}
+    }
+  },
+  scales:{
+    x:{
+      grid:{display:false},border:{color:'rgba(0,0,0,.08)'},
+      ticks:{font:{size:11.5,weight:'600'},color:'#374151',
+        maxTicksLimit:dates.length>90?8:dates.length>30?10:6,maxRotation:0}
+    },
+    y:{
+      grid:{color:'rgba(0,0,0,.05)'},border:{color:'rgba(0,0,0,.08)'},
+      ticks:{callback:yFmt,font:{size:11.5},maxTicksLimit:5,color:'#374151'}
+    }
+  }
+});
+
+function renderTrend(){
+  const dates=getDates();const chs=getChannels(topN);
+  const idx=Object.fromEntries(dates.map((d,i)=>[d,i]));
+  const datasets=chs.map(({ch,color})=>{
+    const vals=new Array(dates.length).fill(null);
+    allData.filter(d=>d.ch===ch).forEach(d=>{const i=idx[d.date];if(i!=null)vals[i]=d.total;});
+    return{label:ch,data:vals,borderColor:color,backgroundColor:'transparent',
+      pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:color,
+      borderWidth:2,tension:0.3,spanGaps:false};
+  });
+  if(trendInst)trendInst.destroy();
+  const opts=CHART_OPTS(dates,v=>man(v),c=>` ${c.dataset.label}: ${comma(c.raw)}`);
+  trendInst=new Chart(document.getElementById('trendChart'),{
+    type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets},
+    plugins:[evPlugin(dates)],options:opts
+  });
+  buildLegend('trendLegend',()=>trendInst,chs);
+}
+
+function renderShare(){
+  const dates=getDates();const chs=getChannels(topN);
+  const idx=Object.fromEntries(dates.map((d,i)=>[d,i]));
+  const dayTotals=new Array(dates.length).fill(0);
+  allData.forEach(d=>{const i=idx[d.date];if(i!=null)dayTotals[i]+=d.total;});
+  const datasets=chs.map(({ch,color})=>{
+    const vals=new Array(dates.length).fill(0);
+    allData.filter(d=>d.ch===ch).forEach(d=>{
+      const i=idx[d.date];
+      if(i!=null)vals[i]=dayTotals[i]>0?+(d.total/dayTotals[i]*100).toFixed(1):0;
+    });
+    return{label:ch,data:vals,backgroundColor:hexRgba(color,0.88),borderColor:'transparent',borderWidth:0,borderRadius:0};
+  });
+  if(shareInst)shareInst.destroy();
+  shareInst=new Chart(document.getElementById('shareChart'),{
+    type:'bar',
+    data:{labels:dates.map(d=>d.slice(5)),datasets},
+    plugins:[evPlugin(dates)],
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{bottom:28}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#0D1B2A',titleColor:'#F1F5F9',bodyColor:'#E2E8F0',
+          borderColor:'#1E293B',borderWidth:1,padding:12,
+          titleFont:{size:13,weight:'700'},bodyFont:{size:13},
+          callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toFixed(1)}%`}
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{display:false},border:{color:'rgba(0,0,0,.08)'},
+          ticks:{font:{size:11.5,weight:'600'},color:'#374151',maxTicksLimit:8,maxRotation:0},
+          barPercentage:1.0,categoryPercentage:1.0},
+        y:{stacked:true,min:0,max:100,
+          grid:{color:'rgba(0,0,0,.05)'},border:{color:'rgba(0,0,0,.08)'},
+          ticks:{callback:v=>v+'%',font:{size:11.5},maxTicksLimit:5,color:'#374151'}}
+      }
+    }
+  });
+  buildLegend('shareLegend',()=>shareInst,chs);
+}
+
+function renderRaw(){
+  const body=document.getElementById('rawBody');
+  if(!allData.length){body.innerHTML='<tr><td colspan="6" class="empty">데이터 없음</td></tr>';return;}
+  const sorted=[...allData].sort((a,b)=>b.date<a.date?-1:b.date>a.date?1:b.total-a.total);
+  body.innerHTML=sorted.slice(0,500).map(d=>{
+    const p=d.pct,bc=p>0?'up':p<0?'dn':'na',ps=p===0?'±0':(p>0?'+':'')+p.toFixed(1)+'%';
+    return`<tr>
+      <td>${d.date}</td>
+      <td class="tl"><span class="ch-dot" style="background:${colorMap[d.ch]||'#374151'}"></span>${d.ch}</td>
+      <td class="num">${comma(d.total)}</td>
+      <td class="num">${comma(d.mobile)}</td>
+      <td class="num">${comma(d.pc)}</td>
+      <td class="num"><span class="badge ${bc}">${ps}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll(){renderTrend();renderShare();renderRaw();}
+
+function setTopN(n,el){
+  topN=n;
+  document.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(allData.length){renderTrend();renderShare();}
+}
+
+// CSV 보정 이력
+function loadCsv(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const rows=parseCsv(ev.target.result);
+    const diff=rows.filter(r=>{const v=r['총방문자수_전'];return v&&v.trim()!==''&&!isNaN(+v)&&+v>0;});
+    if(!diff.length){alert('보정 전 값(_전 컬럼)이 없습니다.');return;}
+    document.getElementById('diffUpload').style.display='none';
+    document.getElementById('diffContent').style.display='';
+    renderDiff(diff);
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+function parseCsv(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^\uFEFF/,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.split(',');const row={};
+    headers.forEach((h,i)=>{row[h]=(vals[i]||'').trim();});
+    return row;
+  });
+}
+
+function renderDiff(diff){
+  const sorted=[...diff].sort((a,b)=>a['날짜']<b['날짜']?-1:1);
+  const tAfter=diff.reduce((s,r)=>s+num(r['총방문자수']),0);
+  const tBefore=diff.reduce((s,r)=>s+num(r['총방문자수_전']),0);
+  const delta=tAfter-tBefore;
+  const pct=tBefore>0?(delta/tBefore*100).toFixed(1):0;
+  const dates=[...new Set(diff.map(r=>r['날짜']))].sort();
+
+  document.getElementById('diffSummary').innerHTML=`
+    <div class="dsmc"><div class="dsmc-l">변경 건수</div><div class="dsmc-v">${diff.length.toLocaleString()}</div><div class="dsmc-s">보정된 행</div></div>
+    <div class="dsmc"><div class="dsmc-l">영향 일수</div><div class="dsmc-v">${dates.length}일</div><div class="dsmc-s">${dates[0].slice(5)} ~ ${dates[dates.length-1].slice(5)}</div></div>
+    <div class="dsmc"><div class="dsmc-l">보정 전 합계</div><div class="dsmc-v">${man(tBefore)}</div><div class="dsmc-s">기간 누적 PV</div></div>
+    <div class="dsmc"><div class="dsmc-l">보정 후 합계</div><div class="dsmc-v">${man(tAfter)}</div><div class="dsmc-s ${delta>=0?'up':'dn'}">${delta>=0?'+':''}${man(delta)} (${pct}%)</div></div>
+  `;
+
+  const dAfter={},dBefore={};
+  diff.forEach(r=>{const d=r['날짜'];dAfter[d]=(dAfter[d]||0)+num(r['총방문자수']);dBefore[d]=(dBefore[d]||0)+num(r['총방문자수_전']);});
+  const dkeys=Object.keys(dAfter).sort();
+
+  if(diffInst)diffInst.destroy();
+  diffInst=new Chart(document.getElementById('diffChart'),{
+    type:'line',
+    data:{
+      labels:dkeys.map(d=>d.slice(5)),
+      datasets:[
+        {label:'보정 후',data:dkeys.map(d=>dAfter[d]),borderColor:'#1D4ED8',backgroundColor:'transparent',pointRadius:0,borderWidth:2.5,tension:0.3},
+        {label:'보정 전',data:dkeys.map(d=>dBefore[d]),borderColor:'#DC2626',backgroundColor:'transparent',pointRadius:0,borderWidth:2,borderDash:[5,4],tension:0.3},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,labels:{font:{size:13,weight:'700'},color:'#1E293B',padding:16,boxWidth:14,boxHeight:3,usePointStyle:false}},
+        tooltip:{backgroundColor:'#0D1B2A',titleColor:'#F1F5F9',bodyColor:'#E2E8F0',borderColor:'#1E293B',borderWidth:1,padding:12,titleFont:{size:13},bodyFont:{size:13},callbacks:{label:c=>` ${c.dataset.label}: ${comma(c.raw)}`}}
+      },
+      scales:{
+        x:{grid:{display:false},border:{color:'rgba(0,0,0,.08)'},ticks:{font:{size:11.5,weight:'600'},color:'#374151',maxTicksLimit:8,maxRotation:0}},
+        y:{grid:{color:'rgba(0,0,0,.05)'},border:{color:'rgba(0,0,0,.08)'},ticks:{callback:v=>man(v),font:{size:11.5},maxTicksLimit:5,color:'#374151'}}
+      }
+    }
+  });
+
+  document.getElementById('diffBody').innerHTML=sorted.map(r=>{
+    const after=num(r['총방문자수']),before=num(r['총방문자수_전']);
+    const d=after-before,p=before>0?(d/before*100).toFixed(1):0;
+    const bc=d>0?'up':d<0?'dn':'na';
+    return`<tr>
+      <td>${r['날짜']}</td>
+      <td class="tl"><span class="ch-dot" style="background:${colorMap[r['유입채널']]||'#374151'}"></span>${r['유입채널']}</td>
+      <td class="num">${comma(after)}</td>
+      <td class="num">${comma(before)}</td>
+      <td class="num"><span class="badge ${bc}">${(d>0?'+':'')+comma(d)}</span></td>
+      <td class="num"><span class="badge ${bc}">${(+p>0?'+':'')+p}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function switchTab(i){
+  [0,1,2,3].forEach(j=>{
+    document.getElementById('pane'+j).style.display=j===i?'':'none';
+    document.getElementById('tab'+j).classList.toggle('active',j===i);
+  });
+  if(i===0&&trendInst)setTimeout(()=>trendInst.resize(),50);
+  if(i===1&&shareInst)setTimeout(()=>shareInst.resize(),50);
+  if(i===2&&diffInst)setTimeout(()=>diffInst.resize(),50);
+}
+</script>
+</body>
+</html>
