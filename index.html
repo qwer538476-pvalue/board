@@ -212,6 +212,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;backg
     <div id="diffContent" style="display:none">
       <div class="diff-summary" id="diffSummary"></div>
       <div class="chart-wrap" style="height:280px;margin-top:16px"><canvas id="diffChart"></canvas></div>
+      <div id="diffTblNote" style="padding:0 20px 10px;font-size:12px;font-weight:600;color:#374151"></div>
       <div class="tbl-wrap">
         <table class="tbl">
           <thead><tr>
@@ -612,7 +613,18 @@ function renderDiff(diff){
     }
   });
 
-  document.getElementById('diffBody').innerHTML=sorted.map(r=>{
+  // 표에는 실제로 값이 바뀐 행만 표시 (보정 전=보정 후인 행은 제외)
+  const changedRows=sorted.filter(r=>num(r['총방문자수'])!==num(r['총방문자수_전']));
+
+  const tblNote=document.getElementById('diffTblNote');
+  if(tblNote)tblNote.textContent=`총 ${diff.length.toLocaleString()}건 중 실제 변동 ${changedRows.length.toLocaleString()}건만 표시`;
+
+  if(!changedRows.length){
+    document.getElementById('diffBody').innerHTML='<tr><td colspan="6" class="empty">실제로 값이 변경된 행이 없습니다</td></tr>';
+    return;
+  }
+
+  document.getElementById('diffBody').innerHTML=changedRows.map(r=>{
     const after=num(r['총방문자수']),before=num(r['총방문자수_전']);
     const d=after-before,p=before>0?(d/before*100).toFixed(1):0;
     const bc=d>0?'up':d<0?'dn':'na';
